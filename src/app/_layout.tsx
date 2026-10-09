@@ -1,18 +1,19 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+// Este archivo define cómo se acomodan todas las pantallas de la app.
+// Expo Router lo carga primero, antes de mostrar cualquier pantalla.
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+// Stack = las pantallas se apilan una encima de otra (permite regresar)
+import { Stack } from 'expo-router';
+// Controla la barra de arriba del celular (hora, batería)
+import { StatusBar } from 'expo-status-bar';
 
-SplashScreen.preventAutoHideAsync();
-
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    // Fragmento: agrupa varios elementos sin crear un contenedor extra
+    <>
+      {/* Íconos oscuros en la barra de estado (el fondo del registro es claro) */}
+      <StatusBar style="dark" />
+      {/* headerShown: false = quitamos la barra de título que Expo pone por defecto */}
+      <Stack screenOptions={{ headerShown: false }} />
+    </>
   );
 }
