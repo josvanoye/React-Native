@@ -4,12 +4,16 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Cabecera, Insignia, comun } from '@/components/ui';
 import { C } from '@/constants/colores';
 import { useApp } from '@/context/app-context';
+import { useAuth } from '@/context/auth-context';
 import { ALUMNO } from '@/data/datos';
 
 export default function Inicio() {
   const router = useRouter();
+  const { usuario } = useAuth();
   const { solicitudes } = useApp();
-  const mias = solicitudes.filter(s => s.matricula === ALUMNO.matricula);
+  const matricula = usuario?.matricula || ALUMNO.matricula;
+  const nombre = usuario?.nombre || 'Alumno';
+  const mias = solicitudes.filter(s => s.matricula === matricula);
   const stats = [
     { etiqueta: 'Activas', valor: mias.filter(s => s.estado !== 'entregado').length },
     { etiqueta: 'En preparación', valor: mias.filter(s => s.estado === 'preparacion').length },
@@ -21,8 +25,8 @@ export default function Inicio() {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Cabecera>
         <Text style={styles.saludo}>BUENOS DÍAS</Text>
-        <Text style={styles.nombre}>Sofía Ramírez</Text>
-        <Text style={styles.sub}>Ing. Sistemas · Mat. {ALUMNO.matricula}</Text>
+        <Text style={styles.nombre}>{nombre}</Text>
+        <Text style={styles.sub}>{matricula ? `Mat. ${matricula}` : (usuario?.correo || '')}</Text>
         <View style={styles.stats}>
           {stats.map(s => (
             <View key={s.etiqueta} style={{ flex: 1, alignItems: 'center' }}>
@@ -40,7 +44,7 @@ export default function Inicio() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {reciente && (
+        {reciente ? (
           <>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: C.textMid }}>Solicitud reciente</Text>
@@ -60,6 +64,14 @@ export default function Inicio() {
               <Text style={{ color: C.textMute, fontSize: 20 }}>›</Text>
             </TouchableOpacity>
           </>
+        ) : (
+          <View style={[comun.tarjeta, { alignItems: 'center', paddingVertical: 24 }]}>
+            <Text style={{ fontSize: 28, marginBottom: 8 }}>📋</Text>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: C.text }}>Sin solicitudes activas</Text>
+            <Text style={{ fontSize: 12, color: C.textMute, marginTop: 4, textAlign: 'center' }}>
+              Toca el botón morado de arriba para realizar tu primer trámite.
+            </Text>
+          </View>
         )}
       </ScrollView>
     </View>

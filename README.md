@@ -54,3 +54,14 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Autenticación y registro
+
+El backend usa las tablas existentes `estudiantes` y `administradores`. Expone `POST /api/auth/register` para registrar estudiantes y `POST /api/auth/login` para iniciar sesión con matrícula/correo de estudiante o correo administrativo. Las contraseñas se guardan con hash; el registro público no permite crear administradores.
+
+1. Conserva los datos de MySQL que ya tengas en `Backend/.env` y agrega `JWT_SECRET` desde `Backend/.env.example`.
+2. Configura `JWT_SECRET` con una cadena aleatoria de al menos 32 bytes. Puedes generarla con `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`.
+3. Inserta tus administradores directamente en `administradores`, tal como está definido en el esquema. El valor de `contrasena` debe ser un hash bcrypt compatible con `bcryptjs`.
+4. En una terminal, inicia el backend con `npm run backend` (o `cd Backend && npm run dev`). En otra terminal, inicia el frontend con `npm run frontend` (o `cd Frontend && npm start`).
+
+Comprueba que el backend responda abriendo `http://localhost:3000/api/test` en la computadora. La app usa `localhost` en web y simuladores, `10.0.2.2` en el emulador Android y detecta la dirección del equipo que ejecuta Expo en un teléfono físico. Si el teléfono no logra conectarse, ambos deben estar en la misma red Wi-Fi; permite conexiones entrantes al puerto 3000 en el firewall o configura `EXPO_PUBLIC_API_URL` en el `.env` de la raíz con la IP LAN de la computadora, por ejemplo `http://192.168.1.10:3000` (no uses `localhost` en el teléfono).

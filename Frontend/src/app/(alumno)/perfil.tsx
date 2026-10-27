@@ -4,10 +4,15 @@ import { ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View
 
 import { Cabecera, comun } from '@/components/ui';
 import { C } from '@/constants/colores';
+import { useAuth } from '@/context/auth-context';
 import { ALUMNO } from '@/data/datos';
 
 export default function Perfil() {
   const router = useRouter();
+  const { usuario, cerrarSesion } = useAuth();
+  const nombre = usuario?.nombre || ALUMNO.nombre;
+  const matricula = usuario?.matricula || ALUMNO.matricula;
+  const correoUsuario = usuario?.correo || ALUMNO.correo;
   const [editando, setEditando] = useState(false);
   const [push, setPush] = useState(true);
   const [correo, setCorreo] = useState(false);
@@ -19,9 +24,9 @@ export default function Perfil() {
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20 }}>
           <View style={styles.avatar}><Text style={{ fontSize: 30 }}>🎓</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 17, fontWeight: '600', color: '#fff' }}>{ALUMNO.nombre}</Text>
-            <Text style={{ fontSize: 12, color: '#DDD6FE' }}>Matrícula: {ALUMNO.matricula}</Text>
-            <Text style={{ fontSize: 12, color: '#DDD6FE' }}>Ing. en Sistemas · {ALUMNO.semestre}</Text>
+            <Text style={{ fontSize: 17, fontWeight: '600', color: '#fff' }}>{nombre}</Text>
+            <Text style={{ fontSize: 12, color: '#DDD6FE' }}>Matrícula: {matricula}</Text>
+            <Text style={{ fontSize: 12, color: '#DDD6FE' }}>{correoUsuario}</Text>
           </View>
           <TouchableOpacity style={styles.editar} onPress={() => setEditando(v => !v)}>
             <Text style={{ fontSize: 15 }}>✏️</Text>
@@ -48,7 +53,7 @@ export default function Perfil() {
         )}
 
         <View style={[comun.tarjeta, { paddingVertical: 4 }]}>
-          {['✉️  ' + ALUMNO.correo, '📞  ' + ALUMNO.telefono, '🏫  Universidad Politécnica de México'].map(t => (
+          {['✉️  ' + correoUsuario, '📞  ' + ALUMNO.telefono, '🏫  Universidad Politécnica de México'].map(t => (
             <Text key={t} style={{ fontSize: 14, color: C.text, paddingVertical: 12 }}>{t}</Text>
           ))}
         </View>
@@ -69,7 +74,7 @@ export default function Perfil() {
           </View>
         </View>
 
-        <TouchableOpacity style={[comun.boton, { backgroundColor: '#FEF2F2' }]} onPress={() => router.replace('/')}>
+        <TouchableOpacity style={[comun.boton, { backgroundColor: '#FEF2F2' }]} onPress={() => { cerrarSesion(); router.replace('/'); }}>
           <Text style={{ color: '#EF4444', fontWeight: '500', fontSize: 14 }}>Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>

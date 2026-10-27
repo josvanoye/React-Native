@@ -5,12 +5,15 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Encabezado, Insignia, comun } from '@/components/ui';
 import { C } from '@/constants/colores';
 import { useApp } from '@/context/app-context';
+import { useAuth } from '@/context/auth-context';
 import { ALUMNO, EstadoSolicitud, ETIQUETAS_ESTADO, ORDEN_ESTADOS } from '@/data/datos';
 
 type Filtro = 'todas' | 'activas' | 'entregadas';
 
 const DESCRIPCION: Record<EstadoSolicitud, string> = {
   solicitud: 'Tu solicitud fue recibida por Servicios Escolares.',
+  revision: 'El documento está en revisión por el personal escolar.',
+  pago: 'Tu ficha de pago está pendiente de validación.',
   preparacion: 'El documento está siendo preparado.',
   listo: 'Preséntate en ventanilla 3 con tu identificación.',
   entregado: 'Documento entregado exitosamente.',
@@ -18,6 +21,7 @@ const DESCRIPCION: Record<EstadoSolicitud, string> = {
 
 export default function MisSolicitudes() {
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const { usuario } = useAuth();
   const { solicitudes } = useApp();
   const [filtro, setFiltro] = useState<Filtro>('todas');
   const [seleccionada, setSeleccionada] = useState<string | null>(null);
@@ -27,7 +31,8 @@ export default function MisSolicitudes() {
     if (id) setSeleccionada(id);
   }, [id]);
 
-  const mias = solicitudes.filter(s => s.matricula === ALUMNO.matricula);
+  const matricula = usuario?.matricula || ALUMNO.matricula;
+  const mias = solicitudes.filter(s => s.matricula === matricula);
   const lista = mias.filter(s => {
     if (filtro === 'activas') return s.estado !== 'entregado';
     if (filtro === 'entregadas') return s.estado === 'entregado';

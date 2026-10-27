@@ -9,7 +9,14 @@ export default function Estadisticas() {
   const { solicitudes } = useApp();
   const total = solicitudes.length;
 
-  const porEstado: Record<EstadoSolicitud, number> = { solicitud: 0, preparacion: 0, listo: 0, entregado: 0 };
+  const porEstado: Record<EstadoSolicitud, number> = {
+    solicitud: 0,
+    revision: 0,
+    pago: 0,
+    preparacion: 0,
+    listo: 0,
+    entregado: 0,
+  };
   const porDocumento: Record<string, number> = {};
   solicitudes.forEach(s => {
     porEstado[s.estado] += 1;

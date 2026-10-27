@@ -4,11 +4,13 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Boton, Encabezado, Fila, comun } from '@/components/ui';
 import { C } from '@/constants/colores';
 import { useApp } from '@/context/app-context';
+import { useAuth } from '@/context/auth-context';
 import { ALUMNO, DOCUMENTOS, DocumentoTipo } from '@/data/datos';
 
 type Paso = 'catalogo' | 'detalle' | 'confirmar' | 'exito';
 
 export default function Solicitar() {
+  const { usuario } = useAuth();
   const { crearSolicitud } = useApp();
   const [paso, setPaso] = useState<Paso>('catalogo');
   const [doc, setDoc] = useState<DocumentoTipo | null>(null);
@@ -97,11 +99,11 @@ export default function Solicitar() {
         <ScrollView contentContainerStyle={{ padding: 20 }}>
           <Text style={styles.seccion}>Datos del estudiante</Text>
           <View style={[comun.tarjeta, { paddingVertical: 4, marginBottom: 20 }]}>
-            <Fila etiqueta="Nombre" valor={ALUMNO.nombre} />
-            <Fila etiqueta="Matrícula" valor={ALUMNO.matricula} />
+            <Fila etiqueta="Nombre" valor={usuario?.nombre || ALUMNO.nombre} />
+            <Fila etiqueta="Matrícula" valor={usuario?.matricula || ALUMNO.matricula} />
             <Fila etiqueta="Carrera" valor={ALUMNO.carrera} />
             <Fila etiqueta="Semestre" valor={ALUMNO.semestre} />
-            <Fila etiqueta="Correo" valor={ALUMNO.correo} />
+            <Fila etiqueta="Correo" valor={usuario?.correo || ALUMNO.correo} />
           </View>
           <Text style={styles.seccion}>Detalle del documento</Text>
           <View style={[comun.tarjeta, { paddingVertical: 4, marginBottom: 20 }]}>

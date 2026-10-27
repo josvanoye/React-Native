@@ -1,10 +1,12 @@
 import { createContext, ReactNode, useContext, useState } from 'react';
 
+import { useAuth } from '@/context/auth-context';
 import {
   ALUMNO,
   AVISOS_INICIALES,
   Aviso,
   DocumentoTipo,
+  EstadoSolicitud,
   ETIQUETAS_ESTADO,
   ORDEN_ESTADOS,
   Solicitud,
@@ -30,20 +32,21 @@ function fechaHoy() {
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const { usuario } = useAuth();
   const [solicitudes, setSolicitudes] = useState<Solicitud[]>(SOLICITUDES_INICIALES);
   const [avisos, setAvisos] = useState<Aviso[]>(AVISOS_INICIALES);
 
   const noLeidos = avisos.filter(a => !a.leido).length;
 
   function crearSolicitud(doc: DocumentoTipo, copias: number) {
-    const id = `REQ-2024-${String(solicitudes.length + 1).padStart(3, '0')}`;
+    const id = `REQ-2026-${String(solicitudes.length + 1).padStart(3, '0')}`;
     const nueva: Solicitud = {
       id,
-      nombreAlumno: ALUMNO.nombre,
-      matricula: ALUMNO.matricula,
+      nombreAlumno: usuario?.nombre || ALUMNO.nombre,
+      matricula: usuario?.matricula || ALUMNO.matricula,
       carrera: ALUMNO.carrera,
       semestre: ALUMNO.semestre,
-      correo: ALUMNO.correo,
+      correo: usuario?.correo || ALUMNO.correo,
       documento: doc.nombre,
       copias,
       estado: 'solicitud',
