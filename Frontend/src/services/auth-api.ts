@@ -40,7 +40,7 @@ function getDefaultApiUrl(): string {
 }
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim();
-const API_URL = (configuredApiUrl || getDefaultApiUrl()).replace(/\/$/, "");
+export const API_URL = (configuredApiUrl || getDefaultApiUrl()).replace(/\/$/, "");
 
 async function post<T>(path: string, body: Record<string, string | number>): Promise<T> {
   let response: Response;
