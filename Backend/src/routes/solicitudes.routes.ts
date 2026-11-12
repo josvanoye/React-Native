@@ -1,33 +1,50 @@
+// QUE HACE: la ruta que crea una solicitud de documento. En UNA transaccion crea
+//           la solicitud, su ficha de pago y los dos primeros pasos de la linea de tiempo.
 import { Router, Request, Response } from "express";
+// Tipos de MySQL: RowDataPacket = una fila; ResultSetHeader = lo que devuelve un INSERT (trae insertId).
 import { RowDataPacket, ResultSetHeader } from "mysql2";
+// Modulo de Node para generar valores aleatorios (lo usamos en la referencia de pago).
 import crypto from "crypto";
+
+// La conexion a MySQL (un pool de conexiones) que armo Joseline; la usamos las dos.
 import connection from "../database/connection";
+
+// Tu funcion que calcula costo x copias con dos decimales.
 import { calcularImporte } from "../utils/calcularImporte";
 
+// Maximo de copias que un alumno puede pedir por documento.
+// Esta escrito en una constante para cambiarlo en un solo lugar.
 // Máximo de copias que un alumno puede pedir por documento
 const MAX_COPIAS = 3;
 
+// Forma de la fila que leemos de documentos (solo id y costo).
 interface DocumentoCosto extends RowDataPacket {
   id: number;
   costo: number;
 }
 
+// Forma de lo que manda la app al crear una solicitud.
 interface NuevaSolicitud {
   estudiante_id: number; // temporal: más adelante saldrá del token del login
   documento_id: number;
   copias: number;
 }
 
+// Grupo de rutas; server.ts lo conecta con app.use("/api/solicitudes", ...).
 const router = Router();
-
+// Dos partes forman la referencia de pago: PAY-3A1F-9C20.
 function parteAleatoria(): string {
   return crypto.randomBytes(2).toString("hex").toUpperCase();
 }
 
 // POST /api/solicitudes -> crea la solicitud, su ficha de pago y la línea de tiempo
 router.post("/", async (req: Request, res: Response) => {
+  // Sacamos los 3 datos del cuerpo. "?? {}" evita un error si no llego cuerpo.
+  // Partial = cualquier campo puede faltar; por eso se validan enseguida.
   const { estudiante_id, documento_id, copias } = (req.body ?? {}) as Partial<NuevaSolicitud>;
 
+   // VALIDACION 1: los tres datos deben ser numeros enteros y copias no puede ser menor a 1.
+  // Si no, 400 = peticion mal hecha.
   if (
     !Number.isInteger(estudiante_id) ||
     !Number.isInteger(documento_id) ||
@@ -35,28 +52,36 @@ router.post("/", async (req: Request, res: Response) => {
     (copias as number) < 1
   ) {
     res.status(400).json({ error: "Datos inválidos" });
-    return;
+    return; // detiene la funcion; sin esto seguiria ejecutando lo de abajo
   }
 
+  // VALIDACION 2: el limite de copias. La app tambien lo limita, pero aqui es donde
+  // de verdad se protege: alguien podria mandar la peticion sin pasar por la app.
   if ((copias as number) > MAX_COPIAS) {
     res.status(400).json({ error: `Máximo ${MAX_COPIAS} copias por documento` });
     return;
   }
 
+  // Tomamos UNA conexion del pool. Una transaccion tiene que usar la misma conexion de
+  // principio a fin.
   const conn = await connection.getConnection();
   try {
+    // Desde aqui nada es definitivo hasta el commit: o se guarda todo, o nada.
     await conn.beginTransaction();
 
+    // Comprobamos que el estudiante exista. El "?" recibe el valor aparte de la consulta
+    // (evita la inyeccion SQL).
     const [estudiantes] = await conn.query<RowDataPacket[]>(
       "SELECT id FROM estudiantes WHERE id = ?",
       [estudiante_id]
     );
     if (estudiantes.length === 0) {
-      await conn.rollback();
-      res.status(404).json({ error: "Estudiante no encontrado" });
+      await conn.rollback();   // deshacemos lo que hubiera
+      res.status(404).json({ error: "Estudiante no encontrado" });   // 404 = no existe
       return;
     }
 
+    // Comprobamos que el documento exista y este activo, y leemos su PRECIO de la base.
     const [docs] = await conn.query<DocumentoCosto[]>(
       "SELECT id, costo FROM documentos WHERE id = ? AND disponible = 1",
       [documento_id]
@@ -67,6 +92,8 @@ router.post("/", async (req: Request, res: Response) => {
       return;
     }
 
+    // El precio sale de la BASE DE DATOS, nunca de la app (alguien podria alterarlo).
+    // Number() por si MySQL entrega el decimal como texto.
     const costo = Number(docs[0].costo);
     const importe = calcularImporte(costo, copias as number);
 
@@ -77,7 +104,9 @@ router.post("/", async (req: Request, res: Response) => {
        VALUES (?, ?, ?, ?, ?, ?, 2)`,
       [`TMP-${Date.now()}`, estudiante_id, documento_id, copias, costo, importe]
     );
+    // insertId = el id que MySQL le asigno a la fila recien creada.
     const id = r.insertId;
+     // Folio definitivo: REQ-2026-001. padStart(3, "0") rellena con ceros hasta 3 digitos.
     const folio = `REQ-${new Date().getFullYear()}-${String(id).padStart(3, "0")}`;
     await conn.query("UPDATE solicitudes SET folio = ? WHERE id = ?", [folio, id]);
 
@@ -85,6 +114,8 @@ router.post("/", async (req: Request, res: Response) => {
     const referencia = `PAY-${parteAleatoria()}-${parteAleatoria()}`;
     const hoy = new Date();
     hoy.setDate(hoy.getDate() + 5);
+    // Fecha en formato YYYY-MM-DD con la hora LOCAL (toISOString usaria UTC y de noche
+    // podria dar un dia de mas).
     const limite = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
     await conn.query(
       "INSERT INTO fichas_pago (solicitud_id, referencia, monto, fecha_limite) VALUES (?, ?, ?, ?)",
@@ -92,20 +123,29 @@ router.post("/", async (req: Request, res: Response) => {
     );
 
     // 3) Línea de tiempo: "Solicitud enviada" y "Ficha generada"
+     // 3) Linea de tiempo: "Solicitud enviada" (1) y "Ficha generada" (2).
+    //    Un solo INSERT con dos filas. administrador_id queda NULL porque lo hizo el sistema.
     await conn.query(
       "INSERT INTO seguimiento (solicitud_id, estatus_id) VALUES (?, 1), (?, 2)",
       [id, id]
     );
 
+    /*Todo salio bien: hacemos definitivos los cambios de las tres tablas a la vez.*/
     await conn.commit();
+    // 201 = "creado". Respondemos lo que muestra la pantalla de la ficha.
     res.status(201).json({ folio, referencia, monto: importe, fecha_limite: limite });
   } catch (err) {
+
+    // Si algo fallo en cualquier paso, se deshace TODO: nunca queda una solicitud sin ficha
     await conn.rollback();
-    console.error(err);
+    console.error(err);   // se imprime en la terminal del servidor para ver que paso
     res.status(500).json({ error: "Error en el servidor" });
   } finally {
+     // Devolvemos la conexion al pool, haya salido bien o mal. Si no, el pool se agotaria.
     conn.release();
   }
 });
 
+
+// Dejamos "router" disponible para que server.ts lo importe.
 export default router;
