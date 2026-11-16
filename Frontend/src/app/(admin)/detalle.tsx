@@ -11,6 +11,7 @@ export default function Detalle() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const { solicitudes, avanzarEstado } = useApp();
+  // Buscamos en la lista la solicitud que tenga el mismo ID que recibimos.
   const sol = solicitudes.find(s => s.id === id);
   const [obs, setObs] = useState(sol?.observaciones ?? '');
   const [historial, setHistorial] = useState(false);
